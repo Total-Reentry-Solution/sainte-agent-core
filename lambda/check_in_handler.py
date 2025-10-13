@@ -16,7 +16,7 @@ def lambda_handler(event, context):
     message = body.get("message")
     
     if not user_id and not message:
-        return {"statusCode": 400 , "body": json.dump({"error":"Missing user_id or message"})}
+        return {"statusCode": 400 , "body": json.dumps({"error":"Missing user_id or message"})}
     
     # Classify State
     tier = classify_user_state(message)
