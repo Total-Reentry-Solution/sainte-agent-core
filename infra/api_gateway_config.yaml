@@ -1,0 +1,27 @@
+openapi: 3.0.1
+info:
+  title: Saini Conversational Agent API
+  version: 1.0.0
+paths:
+  /checkin:
+    post:
+      summary: User check-in endpoint
+      operationId: checkinHandler
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                message:
+                  type: string
+      responses:
+        "200":
+          description: Successful response
+      x-amazon-apigateway-integration:
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:REGION:ACCOUNT_ID:function:check_in_handler/invocations
+        httpMethod: POST
+        type: aws_proxy
