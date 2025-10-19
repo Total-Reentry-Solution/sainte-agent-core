@@ -1,4 +1,3 @@
-# lambda/respond_nudge_us_east_1.py
 import boto3, json, os
 from datetime import datetime
 
@@ -12,8 +11,9 @@ table = dynamodb.Table(os.getenv("TABLE_NAME", "SainiCheckins"))
 
 MODEL_ID = "anthropic.claude-3-sonnet-20240229-v1:0"
 
+
 def fetch_recent_context(user_id: str, limit: int = 3):
-    """Fetch the last few check-ins for conversational context."""
+    """Fetch last few check-ins for conversation context."""
     try:
         resp = table.scan()
         items = [i for i in resp.get("Items", []) if i.get("user_id") == user_id]
@@ -23,47 +23,51 @@ def fetch_recent_context(user_id: str, limit: int = 3):
         print(f"⚠️ Context fetch failed: {e}")
         return []
 
+
 def generate_conversation(message: str, tier: str, context_msgs):
-    """Generate empathetic conversation reply using Claude 3 Sonnet."""
-    history_text = ""
-    for i, item in enumerate(context_msgs):
-        history_text += f"User({i}): {item.get('message')}\nSaini: {item.get('response')}\n"
-    prompt = f"""
-You are Saini, an emotionally intelligent and trauma-informed AI companion.
-Respond as if continuing a caring conversation.
+    """Generate empathetic conversational reply using Claude 3 Sonnet (native schema)."""
+    messages = []
 
-User emotional tier: {tier}
-Conversation history:
-{history_text}
+    # Append short context (conversation memory)
+    for item in reversed(context_msgs):
+        messages.append({"role": "user", "content": item.get("message", "")})
+        messages.append({"role": "assistant", "content": item.get("response", "")})
 
-User now says: "{message}"
+    # Add current message
+    messages.append({
+        "role": "user",
+        "content": f"User emotional tier: {tier}\nUser says: {message}"
+    })
 
-Respond in a tone that matches prior empathy. 
-Reply with 2-3 warm, human-like sentences showing understanding and gentle guidance.
-Also output a short tone tag (gentle, reflective, reassuring, empowering).
-
-Respond in JSON:
-{{"response": "...", "tone": "..."}}"""
+    # ✅ Native Anthropic request structure per AWS docs
+    payload = {
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": 400,
+        "temperature": 0.7,
+        "messages": messages
+    }
 
     try:
-        result = bedrock.invoke_model(
+        response = bedrock.invoke_model(
             modelId=MODEL_ID,
-            body=json.dumps({
-                "inputText": prompt,
-                "textGenerationConfig": {"temperature": 0.8, "maxTokenCount": 350},
-            }),
+            body=json.dumps(payload),
             contentType="application/json",
-            accept="application/json",
+            accept="application/json"
         )
-        output = json.loads(result["body"].read())
-        text = output.get("outputText") or output.get("results", [{}])[0].get("outputText", "")
-        try:
-            return json.loads(text)
-        except:
-            return {"response": text.strip(), "tone": "gentle"}
+
+        raw = json.loads(response["body"].read())
+        content_list = raw.get("content", [])
+        text = content_list[0].get("text", "") if content_list else ""
+
+        return {"response": text.strip(), "tone": "gentle"}
+
     except Exception as e:
         print(f"❌ Claude generation failed: {e}")
-        return {"response": "I'm here with you. Tell me more about how today feels.", "tone": "gentle"}
+        return {
+            "response": "I’m here with you. Tell me more about how you’re feeling today.",
+            "tone": "gentle"
+        }
+
 
 def lambda_handler(event, context):
     try:
@@ -79,6 +83,7 @@ def lambda_handler(event, context):
         response_text = reflection.get("response", "")
         tone = reflection.get("tone", "gentle")
 
+        # Save reflection to DynamoDB
         item = {
             "user_id": user_id,
             "timestamp": datetime.utcnow().isoformat(),
@@ -86,13 +91,22 @@ def lambda_handler(event, context):
             "tier": tier,
             "response": response_text,
             "tone": tone,
-            "source": "Claude3-Sonnet-Conversation"
+            "source": "Claude3-Sonnet-Native"
         }
         table.put_item(Item=item)
         print(f"✅ Conversational reply stored for {user_id} ({tone})")
 
-        return {"statusCode": 200, "body": json.dumps({"response": response_text, "tone": tone})}
+        return {
+            "statusCode": 200,
+            "body": json.dumps({
+                "response": response_text,
+                "tone": tone
+            })
+        }
 
     except Exception as e:
         print(f"❌ Lambda failed: {e}")
-        return {"statusCode": 500, "body": json.dumps({"error": str(e)})}
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"error": str(e)})
+        }
