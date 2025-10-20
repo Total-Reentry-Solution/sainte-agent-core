@@ -1,0 +1,13 @@
+
+  You can now view your Streamlit app in your browser.
+
+  URL: http://0.0.0.0:8501
+
+  For better performance, install the Watchdog module:
+
+  $ xcode-select --install
+  $ pip install watchdog
+            
+2025-10-19 22:52:44.790 Port 8501 is already in use
+2025-10-19 22:52:48.249 Port 8501 is already in use
+  Stopping...

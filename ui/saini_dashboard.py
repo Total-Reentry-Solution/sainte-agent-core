@@ -39,3 +39,9 @@ with tab2:
     render_history_feed(API_BASE)
 
 render_footer()
+
+
+
+#export API_BASE="https://b6wdy7b2w0.execute-api.us-east-2.amazonaws.com/prod"
+#export TABLE_NAME="SainiCheckins"
+#export AWS_REGION="us-east-2"
