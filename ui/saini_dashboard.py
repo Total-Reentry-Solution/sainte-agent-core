@@ -2,7 +2,6 @@ import streamlit as st
 from components.header import render_header
 from components.checkin_form import render_checkin_form
 from components.history_feed import render_history_feed
-from components.emotion_chart import render_emotion_chart
 from components.footer import render_footer
 
 API_BASE = "https://b6wdy7b2w0.execute-api.us-east-2.amazonaws.com/prod"
@@ -12,7 +11,6 @@ st.set_page_config(
     layout="wide",
 )
 
-# --- Custom Global Theme ---
 st.markdown("""
 <style>
 body {background-color:#0A0A0A;color:white;font-family:'Inter',sans-serif;}
@@ -32,15 +30,12 @@ p,label,textarea,input {color:#B0B0B0;}
 </style>
 """, unsafe_allow_html=True)
 
-# --- Layout ---
 render_header()
-tab1, tab2, tab3 = st.tabs(["💬 Check-In", "📜 History", "📈 Emotional Trends"])
+tab1, tab2 = st.tabs(["💬 Check-In", "📜 History"])
 
 with tab1:
     render_checkin_form(API_BASE)
 with tab2:
     render_history_feed(API_BASE)
-with tab3:
-    render_emotion_chart(API_BASE)
 
 render_footer()
